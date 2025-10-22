@@ -1,24 +1,76 @@
 # 🪙 Investment Portfolio Tracker – Next.js + Supabase
 
-A comprehensive web app to **track and visualize ALL your investments in one place** — including Stocks, Mutual Funds, ETFs, EPF, PPF, Fixed Deposits, Bonds, Cryptocurrency, Gold, Real Estate, NPS, Savings Accounts, Recurring Deposits, and more — built with **Next.js 14**, **Supabase**, and **Tailwind CSS**.
+A **professional-grade portfolio management system** to track and analyze ALL your investments in one place — with **live market data**, **advanced analytics**, and **transaction management** — built with **Next.js 14**, **Supabase**, and **Tailwind CSS**.
+
+---
+
+## ✨ What's New in v2.0
+
+### 🆕 Advanced Analytics
+- **Sector-wise Analysis**: See portfolio distribution across IT, Banking, Pharma, Energy, FMCG, etc.
+- **Industry-wise Analysis**: Granular breakdown by specific industries
+- **Market Cap Analysis**: Large Cap, Mid Cap, Small Cap distribution with risk assessment
+
+### 🆕 Live Market Integration
+- Real-time NSE stock prices via Yahoo Finance API
+- NIFTY 50 index tracking
+- One-click price refresh for all stocks
+- Auto-update portfolio valuations
+
+### 🆕 Dedicated Transactions Page
+- Buy/Sell transaction recording with fees
+- Bonus shares and stock split management
+- Dividend tracking
+- Complete transaction history and audit trail
+
+### 🆕 Auto-metadata Fetching
+- Enter NSE symbol → Auto-fetch company name, sector, industry, market cap
+- 50+ popular stocks in local database
+- Smart symbol search with auto-suggestions
 
 ---
 
 ## 🚀 Features
 
-- ✅ **14 Investment Categories**: Track stocks, mutual funds, ETFs, EPF, PPF, FDs, bonds, crypto, gold, real estate, NPS, savings, RDs, and more
+### Core Portfolio Management
+- ✅ **14 Investment Categories**: Stocks, Mutual Funds, ETFs, EPF, PPF, FDs, Bonds, Crypto, Gold, Real Estate, NPS, Savings, RDs, Other
+- ✅ **ROI & XIRR Calculations**: Simple returns and time-weighted returns
+- ✅ **What-If Analyzer**: Test portfolio scenarios (-20% to +20%)
+- ✅ **Top/Bottom Performers**: See best and worst investments
+- ✅ **Advanced Fields**: Units, prices, dates, notes, institution details
+
+### Live Market Data
+- ✅ **Real-time Prices**: Live NSE stock prices
+- ✅ **NIFTY 50 Tracking**: Index value in header
+- ✅ **Auto-update**: One-click refresh for all stocks
+- ✅ **Smart Caching**: 1-minute cache to prevent rate limits
+
+### Advanced Analytics
+- ✅ **Sector Distribution**: Portfolio breakdown by sectors with donut charts
+- ✅ **Industry Analysis**: Top 10 industries with bar charts  
+- ✅ **Market Cap Analysis**: Large/Mid/Small cap allocation and risk profile
+- ✅ **Concentration Risk**: Identify overexposure to sectors/industries
+
+### Transaction Management
+- ✅ **Buy/Sell Tracking**: Record all stock transactions with fees (brokerage, STT)
+- ✅ **Corporate Actions**: Bonus shares and stock splits
+- ✅ **Dividend Recording**: Track dividend income
+- ✅ **Transaction History**: Complete audit trail with filtering
+- ✅ **Auto-calculations**: Total amounts with all charges included
+
+### Professional UI
+- ✅ **Dark Theme**: Gradient backgrounds with glass-effect cards
+- ✅ **Donut Charts**: Beautiful visualizations with Recharts
+- ✅ **Responsive Design**: Mobile, tablet, desktop optimized
+- ✅ **Color Coding**: Sector/market cap specific colors
+- ✅ **Smooth Animations**: Professional transitions and effects
+
+### Security & Deployment
 - ✅ **User Authentication**: Secure login via Supabase Auth  
-- ✅ **Portfolio Summary Dashboard**: View total invested, current value, gains/losses, and returns %
-- ✅ **Advanced Fields**: Track units, purchase price, current price, maturity dates, institution details, and notes
-- ✅ **Real-time Sync**: All data synced with Supabase database  
-- ✅ **Interactive Visualizations**: Pie chart showing portfolio distribution by category (Recharts)  
-- ✅ **Smart Filtering**: Filter investments by category
-- ✅ **Detailed Investment Table**: View all investments with gains/losses calculated automatically
-- ✅ **Responsive UI**: Beautiful design that works on mobile, tablet, and desktop (TailwindCSS)
-- ✅ **Indian Currency Support**: ₹ symbol with lakhs/crores formatting
-- ✅ **Secure per-user data**: Row Level Security ensures users see only their own investments  
-- ✅ **Easy deployment**: Deploy on **Vercel + Supabase** in minutes
-- ✅ **Automated CI/CD**: Push to GitHub → Auto-deploy to Vercel 🚀
+- ✅ **Row Level Security**: Users see only their own data
+- ✅ **Vercel Hosting**: Production-ready deployment
+- ✅ **GitHub Actions**: Automated CI/CD pipeline
+- ✅ **Environment Variables**: Secure configuration management
 
 ---
 
@@ -40,7 +92,15 @@ cp .env.example .env.local
 
 # 3. Add your Supabase credentials to .env.local
 
-# 4. Run development server
+# 4. Run database setup wizard (Automated)
+npm run setup
+
+# OR manually run SQL migrations:
+# Go to Supabase Dashboard > SQL Editor
+# Run sql/schema.sql
+# Run sql/enhanced_schema.sql
+
+# 5. Run development server
 npm run dev
 ```
 
@@ -48,13 +108,105 @@ Open [http://localhost:3000](http://localhost:3000) in your browser!
 
 ---
 
+## 🤖 Automated Database Setup
+
+We provide **automated scripts** to simplify database migrations:
+
+### Interactive Setup Wizard (Recommended)
+```bash
+npm run setup
+```
+- ✅ Validates environment configuration
+- ✅ Lists migration files with details
+- ✅ Shows SQL content for easy copy-paste
+- ✅ Provides verification checklist
+- ✅ Step-by-step guidance
+
+### Database Helper
+```bash
+npm run db:setup
+```
+- Quick reference and Supabase links
+
+### Advanced Migration (if service role key available)
+```bash
+npm run db:migrate
+```
+- Attempts automated SQL execution
+
+📖 **Full Guide:** [DATABASE_AUTOMATION.md](DATABASE_AUTOMATION.md)
+
+---
+
 ## 📚 Documentation
 
+### Getting Started
+- **[DATABASE_AUTOMATION.md](DATABASE_AUTOMATION.md)** 🤖 - Automated setup scripts guide
+- **[QUICK_START.md](QUICK_START.md)** ⭐ - 5-minute setup guide with sample data
+- **[SETUP.md](SETUP.md)** - Detailed setup instructions
+
+### New Features (v2.0)
+- **[ANALYTICS_GUIDE.md](ANALYTICS_GUIDE.md)** 🆕 - Complete analytics documentation (Sector/Industry/Market Cap)
+- **[NSE_API_GUIDE.md](NSE_API_GUIDE.md)** 🆕 - Live price integration guide
+- **[FEATURES_SUMMARY.md](FEATURES_SUMMARY.md)** 🆕 - All features at a glance
+
+### Deployment & Usage
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment guide (Supabase + Vercel + GitHub)
 - **[GITHUB_VERCEL_AUTOMATION.md](GITHUB_VERCEL_AUTOMATION.md)** - Automated CI/CD pipeline setup
-- **[SETUP.md](SETUP.md)** - Detailed setup instructions
 - **[USER_GUIDE.md](USER_GUIDE.md)** - How to use the application
-- **[PORTFOLIO_FEATURES.md](PORTFOLIO_FEATURES.md)** - Feature documentation
+- **[PORTFOLIO_FEATURES.md](PORTFOLIO_FEATURES.md)** - Feature specifications
+
+---
+
+## 🎯 Use Cases
+
+### For Long-term Investors
+```
+✓ Track stocks, mutual funds, EPF, PPF all in one place
+✓ Monitor sector exposure and rebalance accordingly
+✓ Calculate XIRR for accurate time-weighted returns
+✓ View portfolio distribution across market caps
+✓ Identify concentration risks early
+```
+
+### For Active Traders
+```
+✓ Record every buy/sell transaction with fees
+✓ Track realized and unrealized P&L
+✓ Manage corporate actions (bonus, splits)
+✓ Live price updates during market hours
+✓ Complete audit trail of all trades
+```
+
+### For Financial Planners
+```
+✓ Analyze client portfolios by sector/industry
+✓ Assess risk based on market cap distribution
+✓ Generate what-if scenarios for planning
+✓ Track multiple investment types
+✓ Professional visualizations for presentations
+```
+
+---
+
+## 📊 Screenshots & Features
+
+### Dashboard - Portfolio Overview
+- **Metrics**: Total Invested, Current Value, Gains, ROI%, XIRR%
+- **Charts**: Donut chart for category distribution
+- **Tables**: Top 5 and Bottom 5 performers
+- **Analytics**: What-If scenario analyzer
+
+### Advanced Analytics Section 🆕
+- **Sector Analysis**: Portfolio distribution across IT, Banking, Pharma, etc.
+- **Industry Breakdown**: Granular view of specific industries
+- **Market Cap**: Large/Mid/Small cap allocation with risk assessment
+
+### Transactions Page 🆕
+- **Transaction Types**: Buy, Sell, Bonus, Split, Dividend
+- **Auto-fetch**: Enter symbol → Get company name, price, sector
+- **History**: Complete transaction audit trail
+- **Smart Search**: Symbol auto-complete with suggestions
 
 ---
 
@@ -62,35 +214,50 @@ Open [http://localhost:3000](http://localhost:3000) in your browser!
 
 | Layer | Technology | Purpose |
 |-------|-------------|----------|
-| Frontend | Next.js (App Router, TypeScript) | UI + API routes |
+| Frontend | Next.js 14 (App Router, TypeScript) | UI + API routes |
 | Backend | Supabase | Database + Auth + API |
 | Database | PostgreSQL (via Supabase) | Store investment data |
 | Charts | Recharts | Portfolio visualization |
-| Styling | TailwindCSS | Modern responsive UI |
+| Styling | TailwindCSS + Custom Dark Theme | Modern responsive UI |
+| Live Data | Yahoo Finance API | Real-time stock prices |
 | Hosting | Vercel | Deploy frontend easily |
+| CI/CD | GitHub Actions | Automated deployment |
 
 ---
 
 ## 🧩 Project Structure
 
-invest-tracker/
+```
+investment-tracker/
 ├── app/
-│ ├── page.tsx # Landing page
-│ ├── login/page.tsx # Supabase Auth UI
-│ ├── dashboard/page.tsx # Investment dashboard
-│ ├── globals.css # Tailwind styles
-│ └── layout.tsx # Root layout
+│   ├── page.tsx                # Landing page
+│   ├── login/page.tsx          # Supabase Auth UI
+│   ├── dashboard/page.tsx      # Main dashboard with analytics
+│   ├── transactions/page.tsx   # Transaction management 🆕
+│   ├── globals.css             # Dark theme styles
+│   └── layout.tsx              # Root layout
 │
 ├── components/
-│ └── PortfolioChart.tsx # Chart component using Recharts
+│   ├── PortfolioChart.tsx      # Donut chart for categories
+│   └── AnalysisChart.tsx       # Sector/Industry/MarketCap charts 🆕
 │
 ├── lib/
-│ └── supabaseClient.ts # Supabase connection
+│   ├── supabaseClient.ts       # Supabase connection
+│   ├── nseApi.ts               # Live price fetching 🆕
+│   └── stockMetadata.ts        # Auto-fetch stock data 🆕
 │
-├── .env.local.example # Example environment variables
-├── tailwind.config.js # Tailwind config
-├── tsconfig.json # TypeScript config
-├── next.config.js # Next.js config
+├── sql/
+│   ├── schema.sql              # Original database schema
+│   └── enhanced_schema.sql     # Transactions + Metadata 🆕
+│
+├── docs/                        # 10+ comprehensive guides 🆕
+├── .github/workflows/ci.yml    # GitHub Actions workflow
+├── .env.local.example          # Example environment variables
+├── tailwind.config.ts          # Tailwind config
+├── tsconfig.json               # TypeScript config
+├── next.config.js              # Next.js config
+└── vercel.json                 # Vercel configuration
+```
 ├── package.json # Dependencies & scripts
 └── README.md # This file
 

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import PortfolioChart from '@/components/PortfolioChart'
+import AnalysisChart from '@/components/AnalysisChart'
+import { fetchMultipleQuotes, fetchNifty50, getCachedQuote, setCachedQuote } from '@/lib/nseApi'
+import { fetchStockMetadata, getMarketCapColor } from '@/lib/stockMetadata'
 
 export type Investment = {
   id: string
@@ -20,6 +23,9 @@ export type Investment = {
   maturity_date?: string
   notes?: string
   institution?: string
+  sector?: string
+  industry?: string
+  market_cap_category?: string
   updated_at?: string
   created_at?: string
 }
@@ -66,6 +72,8 @@ export default function DashboardPage() {
   const [investments, setInvestments] = useState<Investment[]>([])
   const [userName, setUserName] = useState('Portfolio')
   const [showAdvancedFields, setShowAdvancedFields] = useState(false)
+  const [nifty50, setNifty50] = useState<number | null>(null)
+  const [refreshingPrices, setRefreshingPrices] = useState(false)
 
   const [form, setForm] = useState({
     category: 'Stock',
@@ -95,6 +103,7 @@ export default function DashboardPage() {
       setUserId(user.id)
       setUserName(user.email?.split('@')[0] || 'User')
       await loadInvestments(user.id)
+      await refreshNifty50()
       setLoading(false)
     }
     init()
@@ -113,6 +122,25 @@ export default function DashboardPage() {
 
   const addInvestment = async () => {
     if (!userId || !form.name || !form.category) return
+    
+    let sector = null
+    let industry = null
+    let market_cap_category = null
+    
+    // Auto-fetch metadata for stocks/ETFs with symbols
+    if ((form.category === 'Stock' || form.category === 'ETF') && form.symbol) {
+      try {
+        const metadata = await fetchStockMetadata(form.symbol)
+        if (metadata) {
+          sector = metadata.sector
+          industry = metadata.industry
+          market_cap_category = metadata.marketCapCategory
+        }
+      } catch (error) {
+        console.error('Error fetching stock metadata:', error)
+      }
+    }
+    
     const payload = {
       user_id: userId,
       category: form.category,
@@ -127,6 +155,9 @@ export default function DashboardPage() {
       maturity_date: form.maturity_date || null,
       notes: form.notes || null,
       institution: form.institution || null,
+      sector: sector,
+      industry: industry,
+      market_cap_category: market_cap_category,
     }
     const { error } = await supabase.from('investments').insert(payload)
     if (!error) {
@@ -153,6 +184,70 @@ export default function DashboardPage() {
   const removeInvestment = async (id: string) => {
     const { error } = await supabase.from('investments').delete().eq('id', id)
     if (!error && userId) await loadInvestments(userId)
+  }
+
+  const refreshNifty50 = async () => {
+    const value = await fetchNifty50()
+    if (value) setNifty50(value)
+  }
+
+  const refreshLivePrices = async () => {
+    if (!userId || refreshingPrices) return
+    
+    setRefreshingPrices(true)
+    
+    try {
+      // Get all investments with symbols
+      const stockInvestments = investments.filter(inv => 
+        inv.symbol && 
+        (inv.category === 'Stock' || inv.category === 'ETF')
+      )
+      
+      if (stockInvestments.length === 0) {
+        alert('No stocks with symbols found to update')
+        return
+      }
+      
+      // Fetch quotes for all symbols
+      const symbols = stockInvestments.map(inv => inv.symbol!).filter(Boolean)
+      const quotes = await fetchMultipleQuotes(symbols)
+      
+      let updatedCount = 0
+      
+      // Update each investment with live price
+      for (const investment of stockInvestments) {
+        const quote = quotes.get(investment.symbol!.replace('.NS', '').toUpperCase())
+        
+        if (quote && quote.lastPrice > 0) {
+          const units = investment.units || 1
+          const newCurrentValue = quote.lastPrice * units
+          
+          const { error } = await supabase
+            .from('investments')
+            .update({ 
+              current_price: quote.lastPrice,
+              current_value: newCurrentValue
+            })
+            .eq('id', investment.id)
+          
+          if (!error) {
+            updatedCount++
+            setCachedQuote(investment.symbol!, quote)
+          }
+        }
+      }
+      
+      // Reload investments to reflect changes
+      await loadInvestments(userId)
+      
+      alert(`Successfully updated ${updatedCount} stock prices!`)
+      
+    } catch (error) {
+      console.error('Error refreshing prices:', error)
+      alert('Error fetching live prices. Please try again.')
+    } finally {
+      setRefreshingPrices(false)
+    }
   }
 
   const filtered = useMemo(() => {
@@ -211,6 +306,66 @@ export default function DashboardPage() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
   }, [filtered])
 
+  // Sector-wise analysis
+  const sectorData = useMemo(() => {
+    const map = new Map<string, { value: number; count: number }>()
+    const stocksAndETFs = investments.filter(i => i.category === 'Stock' || i.category === 'ETF')
+    
+    for (const i of stocksAndETFs) {
+      const key = i.sector || 'Uncategorized'
+      const prev = map.get(key) || { value: 0, count: 0 }
+      map.set(key, { 
+        value: prev.value + (i.current_value || 0),
+        count: prev.count + 1
+      })
+    }
+    
+    return Array.from(map.entries())
+      .map(([name, data]) => ({ name, value: data.value, count: data.count }))
+      .sort((a, b) => b.value - a.value)
+  }, [investments])
+
+  // Industry-wise analysis
+  const industryData = useMemo(() => {
+    const map = new Map<string, { value: number; count: number }>()
+    const stocksAndETFs = investments.filter(i => i.category === 'Stock' || i.category === 'ETF')
+    
+    for (const i of stocksAndETFs) {
+      const key = i.industry || 'Uncategorized'
+      const prev = map.get(key) || { value: 0, count: 0 }
+      map.set(key, { 
+        value: prev.value + (i.current_value || 0),
+        count: prev.count + 1
+      })
+    }
+    
+    return Array.from(map.entries())
+      .map(([name, data]) => ({ name, value: data.value, count: data.count }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10) // Top 10 industries
+  }, [investments])
+
+  // Market Cap analysis
+  const marketCapData = useMemo(() => {
+    const map = new Map<string, { value: number; count: number }>()
+    const stocks = investments.filter(i => i.category === 'Stock')
+    
+    for (const i of stocks) {
+      const key = i.market_cap_category || 'Uncategorized'
+      const prev = map.get(key) || { value: 0, count: 0 }
+      map.set(key, { 
+        value: prev.value + (i.current_value || 0),
+        count: prev.count + 1
+      })
+    }
+    
+    // Sort by market cap category order
+    const order = ['Large Cap', 'Mid Cap', 'Small Cap', 'Micro Cap', 'Uncategorized']
+    return Array.from(map.entries())
+      .map(([name, data]) => ({ name, value: data.value, count: data.count }))
+      .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
+  }, [investments])
+
   // What-If calculations
   const whatIfValue = useMemo(() => {
     return summary.totalCurrent * (1 + whatIfPercentage / 100)
@@ -233,9 +388,24 @@ export default function DashboardPage() {
             <p className="text-gray-400 text-sm mt-1 capitalize">{userName}</p>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push('/transactions')}
+              className="text-sm px-4 py-2 rounded bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 transition-colors border border-purple-600/30"
+            >
+              📊 Transactions
+            </button>
+            <button
+              onClick={refreshLivePrices}
+              disabled={refreshingPrices}
+              className="text-sm px-4 py-2 rounded bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600/30 transition-colors border border-cyan-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {refreshingPrices ? '⟳ Updating...' : '↻ Refresh Prices'}
+            </button>
             <div className="text-right">
               <p className="text-xs text-gray-400">NIFTY 50</p>
-              <p className="text-sm font-semibold text-gray-200">--</p>
+              <p className="text-sm font-semibold text-gray-200">
+                {nifty50 ? `₹${nifty50.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '--'}
+              </p>
             </div>
             <button 
               className="text-sm px-4 py-2 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors border border-red-600/30"
@@ -458,6 +628,119 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Advanced Analysis Section - Sector, Industry, Market Cap */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Sector Analysis */}
+          <div className="card-dark rounded-lg p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-cyan-400 mb-4">Sector-wise Distribution</h2>
+            
+            {sectorData.length > 0 ? (
+              <>
+                <AnalysisChart 
+                  data={sectorData} 
+                  title="Portfolio by Sector"
+                  type="donut"
+                />
+                
+                <div className="mt-6 space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Top Sectors</h3>
+                  {sectorData.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-800">
+                      <span className="text-sm text-gray-300">{item.name}</span>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-white">
+                          ₹{item.value.toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-xs text-gray-400">{item.count} stocks</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                No sector data available. Add stocks with symbols to see analysis.
+              </div>
+            )}
+          </div>
+
+          {/* Industry Analysis */}
+          <div className="card-dark rounded-lg p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-purple-400 mb-4">Industry-wise Distribution</h2>
+            
+            {industryData.length > 0 ? (
+              <>
+                <AnalysisChart 
+                  data={industryData} 
+                  title="Top Industries"
+                  type="bar"
+                />
+                
+                <div className="mt-6 space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Industry Breakdown</h3>
+                  {industryData.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-800">
+                      <span className="text-sm text-gray-300">{item.name}</span>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-white">
+                          ₹{item.value.toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-xs text-gray-400">{item.count} stocks</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                No industry data available. Add stocks with symbols to see analysis.
+              </div>
+            )}
+          </div>
+
+          {/* Market Cap Analysis */}
+          <div className="card-dark rounded-lg p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-green-400 mb-4">Market Cap Distribution</h2>
+            
+            {marketCapData.length > 0 ? (
+              <>
+                <AnalysisChart 
+                  data={marketCapData} 
+                  title="Portfolio by Market Cap"
+                  type="donut"
+                />
+                
+                <div className="mt-6 space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Market Cap Breakdown</h3>
+                  {marketCapData.map((item, idx) => {
+                    const total = marketCapData.reduce((sum, d) => sum + d.value, 0)
+                    const percentage = total > 0 ? (item.value / total * 100).toFixed(1) : 0
+                    return (
+                      <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-800">
+                        <span className="text-sm text-gray-300">{item.name}</span>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-white">
+                            {percentage}%
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            ₹{item.value.toLocaleString('en-IN')} ({item.count})
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                No market cap data available. Add stocks to see analysis.
+              </div>
+            )}
+          </div>
+          
+        </div>
+
         {/* Add Investment Form (Collapsible) */}
         <details className="card-dark rounded-lg shadow-lg">
           <summary className="p-6 cursor-pointer hover:bg-gray-800/30 transition-colors rounded-lg">
@@ -531,6 +814,7 @@ export default function DashboardPage() {
           </div>
         </details>
 
+        {/* Add Transaction Section */}
         {/* Market Comparison Footer */}
         <div className="card-dark rounded-lg p-4 shadow-lg">
           <div className="flex flex-wrap justify-around items-center gap-4 text-sm">
